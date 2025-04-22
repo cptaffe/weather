@@ -19,7 +19,7 @@ spec:
         image: us-south1-docker.pkg.dev/homelab-388417/homelab/weather:latest
         imagePullPolicy: Always
         volumeMounts:
-        - name: resources
+        - name: state
           readOnly: true
           mountPath: /usr/src/weather/state
       volumes:
