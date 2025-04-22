@@ -1,0 +1,44 @@
+#!/usr/bin/env rc
+flag e +
+
+fn log {
+	echo `{date +%Y-%m-%dT%H:%M:%S%z} $1 >[1=2]
+}
+
+pulaski_zone='https://api.weather.gov/zones/county/ARC119'
+
+while (true) {
+	log 'Fetch new alerts, store'
+	curl \
+		--silent \
+		--fail-with-body \
+		--show-error \
+		--header 'User-Agent: (weather.connor.zip, weather@connor.zip)' \
+		--header 'Accept: application/ld+json' \
+		https://api.weather.gov/alerts?area=AR \
+		| jq \
+		--arg pulaski_zone $pulaski_zone \
+		--raw-output \
+		'.["@graph"][] | select(.affectedZones[] | contains($pulaski_zone)) | "\(.["@id"])\t\(.)"' \
+		| sort \
+		>state/new
+
+	if (! -f state/seen) { touch state/seen }
+
+	log 'Find new alerts, format'
+	join -v1 -t '	' state/new state/seen \
+		| cut -f2 \
+		| jq \
+		--raw-output \
+		'"\u001b4\u001bE\(.event)\u001b5\u001bF\r\nFrom: \(.effective)\r\nUntil: \(.expires)\(.description | [scan("(was|were) located ([^\\.]+.)")] as $location | if ($location | length > 0) then $location[0][1] | gsub("\n"; " ") | sub("(?<a>^[a-z])"; "\(.a|ascii_upcase)") | "\r\nLocated: \(.)" else "" end)\r\n"' \
+		| tcpw --address star-sp700.home.arpa:9100
+
+	log 'Update seen with new'
+	cat <{cut -f1 <state/new} state/seen | sort | uniq >state/seen.new
+
+	rm state/seen
+	mv state/seen.new state/seen
+
+	log 'Delay'
+	sleep 30
+}
