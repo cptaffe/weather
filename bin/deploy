@@ -1,5 +1,6 @@
 #!/usr/bin/env rc
 flag e +
+flag x +
 
 tag=`{git rev-parse --short HEAD}
 image='us-south1-docker.pkg.dev/homelab-388417/homelab/weather'
