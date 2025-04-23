@@ -23,7 +23,8 @@ while (true) {
 		| sort \
 		>state/new
 
-	if (! test -f state/seen) { touch state/seen }
+	if (! test -f state/seen)
+		touch state/seen
 
 	log 'Find new alerts, format'
 	join -v1 -t '	' state/new state/seen \
@@ -31,7 +32,11 @@ while (true) {
 		| jq \
 		--raw-output \
 		'"\u001b4\u001bE\(.event)\u001b5\u001bF\r\nFrom: \(.effective)\r\nUntil: \(.expires)\(.description | [scan("(was|were) located ([^\\.]+.)")] as $location | if ($location | length > 0) then $location[0][1] | gsub("\n"; " ") | sub("(?<a>^[a-z])"; "\(.a|ascii_upcase)") | "\r\nLocated: \(.)" else "" end)\r\n"' \
-		| tcpw --address star-sp700.home.arpa:9100
+		>state/job
+
+	# Connect only if necessary
+	if (test -s state/job)
+		tcpw --address star-sp700.home.arpa:9100 <state/job
 
 	log 'Update seen with new'
 	cat <{cut -f1 <state/new} state/seen | sort | uniq >state/seen.new
