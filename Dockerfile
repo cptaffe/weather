@@ -15,7 +15,7 @@ WORKDIR /usr/src/plan9port
 RUN git clone https://github.com/9fans/plan9port.git . && \
 	./INSTALL
 
-WORKDIR /usr/src/app
+WORKDIR /usr/src/weather
 
 # pre-copy/cache go.mod for pre-downloading dependencies and only redownloading them in subsequent builds if they change
 COPY go.mod go.sum ./

@@ -20,7 +20,6 @@ spec:
         imagePullPolicy: Always
         volumeMounts:
         - name: state
-          readOnly: true
           mountPath: /usr/src/weather/state
       volumes:
       - name: state

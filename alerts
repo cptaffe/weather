@@ -23,7 +23,7 @@ while (true) {
 		| sort \
 		>state/new
 
-	if (! -f state/seen) { touch state/seen }
+	if (! test -f state/seen) { touch state/seen }
 
 	log 'Find new alerts, format'
 	join -v1 -t '	' state/new state/seen \
