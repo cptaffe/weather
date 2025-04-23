@@ -15,7 +15,7 @@ while (true) {
 		--show-error \
 		--header 'User-Agent: (weather.connor.zip, weather@connor.zip)' \
 		--header 'Accept: application/ld+json' \
-		https://api.weather.gov/alerts?area=AR \
+		https://api.weather.gov/alerts/active?area=AR \
 		| jq \
 		--arg pulaski_zone $pulaski_zone \
 		--raw-output \
