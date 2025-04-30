@@ -10,7 +10,7 @@ RUN apk add --no-cache \
 
 # Install plan9port (works as of 9da5b4451365e33c4f561d74a99ad5c17ff20fed)
 ENV PLAN9=/usr/src/plan9port
-ENV PATH="$PATH:$PLAN9/bin"
+ENV PATH="$PLAN9/bin:$PATH"
 WORKDIR /usr/src/plan9port
 RUN git clone https://github.com/9fans/plan9port.git . && \
 	./INSTALL
