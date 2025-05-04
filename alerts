@@ -2,47 +2,59 @@
 flag e +
 
 fn log {
-	echo `{date +%Y-%m-%dT%H:%M:%S%z} $1 >[1=2]
+	echo `{date} $1 >[1=2]
 }
 
 pulaski_zone='https://api.weather.gov/zones/county/ARC119'
 
 while (true) {
 	log 'Fetch new alerts, store'
-	curl \
-		--silent \
-		--fail-with-body \
-		--show-error \
-		--header 'User-Agent: (weather.connor.zip, weather@connor.zip)' \
-		--header 'Accept: application/ld+json' \
-		https://api.weather.gov/alerts/active?area=AR \
-		| jq \
-		--arg pulaski_zone $pulaski_zone \
-		--raw-output \
-		'.["@graph"][] | select(.affectedZones[] | contains($pulaski_zone)) | "\(.["@id"])\t\(.)"' \
-		| sort \
-		>state/new
+	if (curl \
+			--silent \
+			--fail-with-body \
+			--show-error \
+			--header 'User-Agent: (weather.connor.zip, weather@connor.zip)' \
+			--header 'Accept: application/ld+json' \
+			https://api.weather.gov/alerts/active?area=AR \
+			>state/response) {
+		log 'Ignore unless affecting Pulaski County'
+		jq \
+			--arg pulaski_zone $pulaski_zone \
+			--raw-output \
+			'.["@graph"][] | select(.affectedZones[] | contains($pulaski_zone)) | "\(.["@id"])\t\(.)"' \
+			<state/response \
+			| sort \
+			>state/new
 
-	if (! test -f state/seen)
-		touch state/seen
+		rm state/response
 
-	log 'Find new alerts, format'
-	join -v1 -t '	' state/new state/seen \
-		| cut -f2 \
-		| jq \
-		--raw-output \
-		'"\u001b4\u001bE\(.event)\u001b5\u001bF\r\nFrom: \(.effective)\r\nUntil: \(.expires)\(.description | [scan("(was|were) located ([^\\.]+.)")] as $location | if ($location | length > 0) then $location[0][1] | gsub("\n"; " ") | sub("(?<a>^[a-z])"; "\(.a|ascii_upcase)") | "\r\nLocated: \(.)" else "" end)\r\n"' \
-		>state/job
+		if (! test -f state/seen)
+			touch state/seen
 
-	# Connect only if necessary
-	if (test -s state/job)
-		tcpw --address star-sp700.home.arpa:9100 <state/job
+		log 'Find new alerts, format'
+		join -v1 -t '	' state/new state/seen \
+			| cut -f2 \
+			| jq \
+			--raw-output \
+			'"\u001b4\u001bE\(.event)\u001b5\u001bF\r\nFrom: \(.effective)\r\nUntil: \(.expires)\(.description | [scan("(was|were) located ([^\\.]+.)")] as $location | if ($location | length > 0) then $location[0][1] | gsub("\n"; " ") | sub("(?<a>^[a-z])"; "\(.a|ascii_upcase)") | "\r\nLocated: \(.)" else "" end)\r\n"' \
+			>state/job
 
-	log 'Update seen with new'
-	cat <{cut -f1 <state/new} state/seen | sort | uniq >state/seen.new
+		# Connect and update seen only if necessary
+		if (test -s state/job) {
+			log 'Print alerts'
+			tcpw --address star-sp700.home.arpa:9100 <state/job
 
-	rm state/seen
-	mv state/seen.new state/seen
+			log 'Update seen with new'
+			cat <{cut -f1 <state/new} state/seen | sort | uniq >state/seen.new
+
+			rm state/seen
+			mv state/seen.new state/seen
+		}
+	}
+	if not if (test -f state/response) {
+		cat state/response >[1=2]
+	}
+
 
 	log 'Delay'
 	sleep 30
